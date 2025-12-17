@@ -1,4 +1,5 @@
-import { HexCoordinate, BiomeType, Tile } from '../types/game';
+import type { HexCoordinate, Tile } from '../types/game';
+import { BiomeType } from '../types/game';
 
 export const HEX_SIZE = 30; // Radius of the hexagon in pixels
 export const HEX_HEIGHT = HEX_SIZE * 2;
@@ -41,7 +42,7 @@ export function generateMap(width: number, height: number): Tile[] {
 
             // Simple random biome generation
             const rand = Math.random();
-            let biome = BiomeType.PLAINS;
+            let biome: BiomeType = BiomeType.PLAINS;
             if (rand > 0.8) biome = BiomeType.MOUNTAIN;
             else if (rand > 0.6) biome = BiomeType.FOREST;
             else if (rand > 0.5) biome = BiomeType.HILLS;

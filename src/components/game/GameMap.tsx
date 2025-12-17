@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { generateMap, drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS, HEX_SIZE } from '../../lib/hexUtils';
-import { Tile, HexCoordinate } from '../../types/game';
+import { generateMap, drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS } from '../../lib/hexUtils';
+import type { Tile, HexCoordinate } from '../../types/game';
 
 interface GameMapProps {
     width?: number; // Map width in hexes
@@ -130,7 +130,7 @@ export const GameMap: React.FC<GameMapProps> = ({ width = 15, height = 10 }) => 
         setHoveredHex(hex);
     };
 
-    const handleMouseUp = (e: React.MouseEvent) => {
+    const handleMouseUp = () => {
         setIsDragging(false);
 
         // Click Logic (if didn't drag much)

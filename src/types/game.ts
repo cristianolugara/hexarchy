@@ -1,13 +1,15 @@
 export type ResourceType = 'FOOD' | 'WOOD' | 'STONE' | 'IRON' | 'GOLD' | 'POPULATION' | 'HAPPINESS';
 
-export enum BiomeType {
-    PLAINS = 'PLAINS',
-    FOREST = 'FOREST',
-    MOUNTAIN = 'MOUNTAIN',
-    DESERT = 'DESERT',
-    WATER = 'WATER',
-    HILLS = 'HILLS'
-}
+export const BiomeType = {
+    PLAINS: 'PLAINS',
+    FOREST: 'FOREST',
+    MOUNTAIN: 'MOUNTAIN',
+    DESERT: 'DESERT',
+    WATER: 'WATER',
+    HILLS: 'HILLS'
+} as const;
+
+export type BiomeType = typeof BiomeType[keyof typeof BiomeType];
 
 export interface HexCoordinate {
     q: number;
