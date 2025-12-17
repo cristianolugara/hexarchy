@@ -100,8 +100,7 @@ const loadAsset = (key: string, src: string) => {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
 
-        // Improved Chroma Key: Euclidean Distance from White
-        const threshold = 90; // Tolerance for compression artifacts
+
 
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i];
@@ -115,8 +114,30 @@ const loadAsset = (key: string, src: string) => {
                 Math.pow(255 - b, 2)
             );
 
-            if (dist < threshold) {
+            // Thresholds
+            const removeThreshold = 40; // Pixels very close to white -> Remove completely
+            const shadowThreshold = 120; // Pixels somewhat close to white (shadows) -> Semi-transparent
+
+            if (dist < removeThreshold) {
                 data[i + 3] = 0; // Transparent
+            } else if (dist < shadowThreshold) {
+                // It's likely a shadow (greyish on white background).
+                // Convert to black with alpha based on darkness.
+                // The closer to white (dist -> 0), the more transparent.
+                // The further from white (dist -> shadowThreshold), the more opaque.
+
+                // We want: White (dist=0) -> Alpha=0
+                //          Dark Grey (dist=shadowThreshold) -> Alpha=0.4 (approx)
+
+                const intensity = dist / shadowThreshold; // 0 to 1
+
+                // make it black/dark green shadow
+                data[i] = 10;     // R
+                data[i + 1] = 20; // G
+                data[i + 2] = 10; // B
+
+                // Alpha: weaker for lighter pixels
+                data[i + 3] = Math.floor(intensity * 100);
             }
         }
 
