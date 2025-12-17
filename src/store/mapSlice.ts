@@ -31,7 +31,7 @@ const initTiles = (): Record<string, Tile> => {
             const e = elevationNoise.noise2D(nx, ny);
             const m = moistureNoise.noise2D(nx, ny);
 
-            let biome = BiomeType.PLAINS;
+            let biome: BiomeType = BiomeType.PLAINS;
 
             // Simple Biome Map
             if (e < -0.3) {
