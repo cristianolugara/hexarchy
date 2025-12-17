@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", sans-serif;
+}
+
+@layer base {
+  body {
+    /* Using slate-950 as deep dark background */
+    background-color: #020617;
+    color: #f8fafc;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    /* App-like feel */
+  }
+}
