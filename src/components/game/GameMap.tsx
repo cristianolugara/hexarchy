@@ -1,30 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { generateMap, drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS } from '../../lib/hexUtils';
+import { useRef, useEffect, useState } from 'react';
+import { drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS } from '../../lib/hexUtils';
 import type { Tile, HexCoordinate } from '../../types/game';
-
-// Define GameState type as it's introduced in the change
-interface GameState {
-    mapWidth: number;
-    mapHeight: number;
-    tiles: Map<string, Tile>;
-}
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../store/store';
 
 interface GameMapProps {
-    width?: number; // Map width in hexes
-    height?: number; // Map height in hexes
+    width?: number; // kept for compatibility
+    height?: number;
     onTileClick?: (tile: Tile) => void;
 }
 
-export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) => {
+export const GameMap = ({ onTileClick }: GameMapProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    // State
-    const [mapState, setMapState] = useState<GameState>({
-        mapWidth: width,
-        mapHeight: height,
-        tiles: new Map()
-    });
+    // Redux State
+    const mapState = useSelector((state: RootState) => state.map);
+    // Convert Record to Map for easier iteration in rendering if needed, 
+    // or just iterate Object.values
+
+    // We can rely on mapState.tiles directly now.
 
     const [camera, setCamera] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -32,17 +27,8 @@ export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) 
     const [hoveredHex, setHoveredHex] = useState<HexCoordinate | null>(null);
     const [selectedHex, setSelectedHex] = useState<HexCoordinate | null>(null);
 
-    // Initial Map Generation
-    useEffect(() => {
-        const generatedTiles = generateMap(width, height);
-        const tileMap = new Map<string, Tile>();
-        generatedTiles.forEach(tile => tileMap.set(tile.id, tile));
-
-        setMapState(prev => ({
-            ...prev,
-            tiles: tileMap
-        }));
-    }, [width, height]);
+    // Map generation is now handled by Redux Initial State or Thunks. 
+    // We don't generate here anymore.
 
     // Draw Loop
     useEffect(() => {
@@ -66,7 +52,7 @@ export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) 
         ctx.translate(canvas.width / 2 + camera.x, canvas.height / 2 + camera.y);
 
         // Draw Tiles - Render in order of Y (Painter's Algorithm for Isometric depth)
-        const sortedTiles = Array.from(mapState.tiles.values()).sort((a, b) => {
+        const sortedTiles = Object.values(mapState.tiles).sort((a, b) => {
             const aPos = hexToPixel(a.coordinates);
             const bPos = hexToPixel(b.coordinates);
             return aPos.y - bPos.y;
@@ -75,11 +61,31 @@ export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) 
         sortedTiles.forEach(tile => {
             const { x, y } = hexToPixel(tile.coordinates);
             const color = BIOME_COLORS[tile.biome];
+
+            // Pass building info to drawHex if exists
+            // For now, drawHex doesn't accept building argument.
+            // We need to modify drawHex or draw building separately on top.
+
             drawHex(ctx, x, y, color);
 
             // Draw Selection Highlight
             if (selectedHex && selectedHex.q === tile.coordinates.q && selectedHex.r === tile.coordinates.r) {
                 drawHex(ctx, x, y, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2);
+            }
+
+            // Draw Building (Simple Placeholder)
+            if (tile.building) {
+                // Draw a simple block or emoji for now until assets
+                ctx.fillStyle = 'purple';
+                ctx.beginPath();
+                ctx.rect(x - 10, y - 25, 20, 20); // Simple hut
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = 'white';
+                ctx.font = '10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(tile.building[0], x, y - 10);
             }
         });
 
@@ -87,7 +93,7 @@ export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) 
         if (hoveredHex) {
             const { x, y } = hexToPixel(hoveredHex);
             const id = getHexId(hoveredHex.q, hoveredHex.r);
-            if (mapState.tiles.has(id)) {
+            if (mapState.tiles[id]) {
                 drawHex(ctx, x, y, 'rgba(255, 255, 255, 0.2)', 'white', 2);
             }
         }
@@ -137,8 +143,8 @@ export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) 
         const hex = pixelToHex(x, y);
         const id = getHexId(hex.q, hex.r);
 
-        if (mapState.tiles.has(id)) {
-            const tile = mapState.tiles.get(id)!;
+        if (mapState.tiles[id]) {
+            const tile = mapState.tiles[id];
             setSelectedHex(hex);
             if (onTileClick) onTileClick(tile);
         } else {
@@ -165,8 +171,8 @@ export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) 
                     {selectedHex ? (
                         <div>
                             <div className="flex items-center gap-2 mb-2">
-                                <div className={`w-3 h-3 rounded-full bg-current`} style={{ color: mapState.tiles.get(getHexId(selectedHex.q, selectedHex.r)) ? BIOME_COLORS[mapState.tiles.get(getHexId(selectedHex.q, selectedHex.r))!.biome] : 'white' }}></div>
-                                <span className="font-medium text-lg capitalize">{mapState.tiles.get(getHexId(selectedHex.q, selectedHex.r))?.biome.toLowerCase()}</span>
+                                <div className={`w-3 h-3 rounded-full bg-current`} style={{ color: mapState.tiles[getHexId(selectedHex.q, selectedHex.r)] ? BIOME_COLORS[mapState.tiles[getHexId(selectedHex.q, selectedHex.r)].biome] : 'white' }}></div>
+                                <span className="font-medium text-lg capitalize">{mapState.tiles[getHexId(selectedHex.q, selectedHex.r)]?.biome.toLowerCase()}</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm text-slate-400 font-mono">
                                 <div>Q: {selectedHex.q}</div>

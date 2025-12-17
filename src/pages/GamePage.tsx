@@ -8,6 +8,8 @@ import { BUILDINGS } from '../config/buildings';
 import { useDispatch } from 'react-redux';
 import { spendResource } from '../store/resourcesSlice';
 
+import { placeBuilding } from '../store/mapSlice';
+
 export const GamePage = () => {
     const dispatch = useDispatch();
     const [selectedBuilding, setSelectedBuilding] = useState<BuildingType | null>(null);
@@ -21,10 +23,10 @@ export const GamePage = () => {
             if (config.cost.WOOD) dispatch(spendResource({ type: 'wood', amount: config.cost.WOOD }));
             if (config.cost.STONE) dispatch(spendResource({ type: 'stone', amount: config.cost.STONE }));
 
-            // TODO: Actually place building on map (Update Map State)
-            // This requires moving Map State up or using a Context/Store for the Map.
-            // For now, let's just log it to prove logic works.
-            console.log(`Built ${config.name} at ${tile.id} `);
+            // Place building on map (Redux)
+            dispatch(placeBuilding({ tileId: tile.id, building: selectedBuilding }));
+
+            console.log(`Built ${config.name} at ${tile.id}`);
 
             setSelectedBuilding(null); // Exit build mode
         }
