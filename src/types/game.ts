@@ -17,10 +17,22 @@ export interface HexCoordinate {
     s: number; // q + r + s = 0
 }
 
+// Building Types
+export const BuildingType = {
+    TOWN_HALL: 'TOWN_HALL',
+    HOUSE: 'HOUSE',
+    FARM: 'FARM',
+    SAWMILL: 'SAWMILL',
+    MINE: 'MINE',
+} as const;
+
+export type BuildingType = typeof BuildingType[keyof typeof BuildingType];
+
 export interface Tile {
     id: string;
     coordinates: HexCoordinate;
     biome: BiomeType;
+    building?: BuildingType;
     resourceYield?: Partial<Record<ResourceType, number>>;
     isStartLocation?: boolean;
 }

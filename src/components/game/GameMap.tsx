@@ -1,200 +1,190 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { generateMap, drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS } from '../../lib/hexUtils';
 import type { Tile, HexCoordinate } from '../../types/game';
+
+// Define GameState type as it's introduced in the change
+interface GameState {
+    mapWidth: number;
+    mapHeight: number;
+    tiles: Map<string, Tile>;
+}
 
 interface GameMapProps {
     width?: number; // Map width in hexes
     height?: number; // Map height in hexes
+    onTileClick?: (tile: Tile) => void;
 }
 
-export const GameMap: React.FC<GameMapProps> = ({ width = 15, height = 10 }) => {
+export const GameMap = ({ width = 15, height = 10, onTileClick }: GameMapProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
-    const [tiles, setTiles] = useState<Map<string, Tile>>(new Map());
 
-    // Camera state for panning
+    // State
+    const [mapState, setMapState] = useState<GameState>({
+        mapWidth: width,
+        mapHeight: height,
+        tiles: new Map()
+    });
+
     const [camera, setCamera] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
-    const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-
-    // Interaction State
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [hoveredHex, setHoveredHex] = useState<HexCoordinate | null>(null);
     const [selectedHex, setSelectedHex] = useState<HexCoordinate | null>(null);
 
-    // Initialize Map
+    // Initial Map Generation
     useEffect(() => {
-        const tilesArr = generateMap(width, height);
-        const map = new Map<string, Tile>();
-        tilesArr.forEach(t => map.set(t.id, t));
-        setTiles(map);
+        const generatedTiles = generateMap(width, height);
+        const tileMap = new Map<string, Tile>();
+        generatedTiles.forEach(tile => tileMap.set(tile.id, tile));
+
+        setMapState(prev => ({
+            ...prev,
+            tiles: tileMap
+        }));
     }, [width, height]);
 
-    // Handle Coordinate Conversion (Screen <-> World)
-    const getMapCoordinates = useCallback((clientX: number, clientY: number) => {
-        const canvas = canvasRef.current;
-        if (!canvas) return { x: 0, y: 0 };
-        const rect = canvas.getBoundingClientRect();
-
-        // Mouse relative to canvas
-        const mx = clientX - rect.left;
-        const my = clientY - rect.top;
-
-        // Apply Camera offset inverse
-        // Drawing Transform: translate(cx, cy)
-        // Screen = World + Offset
-        // World = Screen - Offset
-        const offsetX = canvas.width / 2 + camera.x;
-        const offsetY = canvas.height / 2 + camera.y;
-
-        return {
-            x: mx - offsetX,
-            y: my - offsetY
-        };
-    }, [camera]);
-
-    // Render Loop
+    // Draw Loop
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Resize canvas to fill container
+        // Resize Canvas
         if (containerRef.current) {
-            // Check if resize is needed to avoid clearing every frame if same size?
-            // For now simple resize
-            if (canvas.width !== containerRef.current.clientWidth || canvas.height !== containerRef.current.clientHeight) {
-                canvas.width = containerRef.current.clientWidth;
-                canvas.height = containerRef.current.clientHeight;
-            }
+            canvas.width = containerRef.current.clientWidth;
+            canvas.height = containerRef.current.clientHeight;
         }
 
         // Clear Screen
-        ctx.fillStyle = '#0f172a'; // slate-900
+        ctx.fillStyle = '#1e293b'; // Slate 800
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        // Apply Camera Transform
         ctx.save();
+        ctx.translate(canvas.width / 2 + camera.x, canvas.height / 2 + camera.y);
 
-        // Center the rendering:
-        const offsetX = canvas.width / 2 + camera.x;
-        const offsetY = canvas.height / 2 + camera.y;
-        ctx.translate(offsetX, offsetY);
+        // Draw Tiles - Render in order of Y (Painter's Algorithm for Isometric depth)
+        const sortedTiles = Array.from(mapState.tiles.values()).sort((a, b) => {
+            const aPos = hexToPixel(a.coordinates);
+            const bPos = hexToPixel(b.coordinates);
+            return aPos.y - bPos.y;
+        });
 
-        // Draw Tiles
-        tiles.forEach(tile => {
+        sortedTiles.forEach(tile => {
             const { x, y } = hexToPixel(tile.coordinates);
-            drawHex(ctx, x, y, BIOME_COLORS[tile.biome]);
+            const color = BIOME_COLORS[tile.biome];
+            drawHex(ctx, x, y, color);
+
+            // Draw Selection Highlight
+            if (selectedHex && selectedHex.q === tile.coordinates.q && selectedHex.r === tile.coordinates.r) {
+                drawHex(ctx, x, y, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2);
+            }
         });
 
         // Draw Hover Cursor
         if (hoveredHex) {
             const { x, y } = hexToPixel(hoveredHex);
-            // Check if hovered hex is valid tile
             const id = getHexId(hoveredHex.q, hoveredHex.r);
-            if (tiles.has(id)) {
+            if (mapState.tiles.has(id)) {
                 drawHex(ctx, x, y, 'rgba(255, 255, 255, 0.2)', 'white', 2);
             }
         }
 
-        // Draw Selected Cursor
-        if (selectedHex) {
-            const { x, y } = hexToPixel(selectedHex);
-            drawHex(ctx, x, y, 'rgba(59, 130, 246, 0.3)', '#60a5fa', 3); // blue highlight
-        }
-
         ctx.restore();
 
-    }, [tiles, camera, hoveredHex, selectedHex]);
+    }, [mapState, camera, hoveredHex, selectedHex]);
 
-    // Input Handling
+    // Input Handlers
     const handleMouseDown = (e: React.MouseEvent) => {
         setIsDragging(true);
-        setLastMousePos({ x: e.clientX, y: e.clientY });
+        setDragStart({ x: e.clientX, y: e.clientY });
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (isDragging) {
-            const dx = e.clientX - lastMousePos.x;
-            const dy = e.clientY - lastMousePos.y;
-
+            const dx = e.clientX - dragStart.x;
+            const dy = e.clientY - dragStart.y;
             setCamera(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-            setLastMousePos({ x: e.clientX, y: e.clientY });
-        }
+            setDragStart({ x: e.clientX, y: e.clientY });
+        } else {
+            // Hover Logic
+            const rect = canvasRef.current?.getBoundingClientRect();
+            if (!rect) return;
 
-        // Hover Logic
-        const { x, y } = getMapCoordinates(e.clientX, e.clientY);
-        const hex = pixelToHex(x, y);
-        // Only update if changed to avoid too many renders? 
-        // React state update checks equality, but object reference is new.
-        // Let's rely on React batching or simple check.
-        setHoveredHex(hex);
+            const x = e.clientX - rect.left - rect.width / 2 - camera.x;
+            const y = e.clientY - rect.top - rect.height / 2 - camera.y;
+
+            const hex = pixelToHex(x, y);
+            setHoveredHex(hex);
+        }
     };
 
     const handleMouseUp = () => {
         setIsDragging(false);
-
-        // Click Logic (if didn't drag much)
-        // Calculate distance from lastMouseDown? 
-        // For simple "click", we can just assume if not dragging. But here strictly it shares interaction.
-        // Let's treat as click if dist < 5px
-        // For now, simpler: just update click if dragging was short?
-        // Let's separate "Click" from "Drag Stop".
-        // Actually, let's use onClick event for Selection? 
-        // But dragging triggers onClick usually.
     };
 
     const handleClick = (e: React.MouseEvent) => {
-        // Prevent click if we were dragging
-        // Implementation detail: track total drag distance
-        const { x, y } = getMapCoordinates(e.clientX, e.clientY);
+        // Simple click detection (if not dragging) works because react events are synthesized.
+        // We might want to lock click if drag distance was large, but for now standard click is fine.
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const x = e.clientX - rect.left - rect.width / 2 - camera.x;
+        const y = e.clientY - rect.top - rect.height / 2 - camera.y;
+
         const hex = pixelToHex(x, y);
         const id = getHexId(hex.q, hex.r);
 
-        if (tiles.has(id)) {
-            console.log("Clicked Tile:", tiles.get(id));
+        if (mapState.tiles.has(id)) {
+            const tile = mapState.tiles.get(id)!;
             setSelectedHex(hex);
+            if (onTileClick) onTileClick(tile);
         } else {
             setSelectedHex(null);
         }
     };
 
     return (
-        <div
-            ref={containerRef}
-            className="w-full h-full relative bg-slate-950 overflow-hidden cursor-move"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onClick={handleClick}
-        >
-            <canvas ref={canvasRef} className="block" />
+        <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-slate-950 cursor-crosshair">
+            <canvas
+                ref={canvasRef}
+                className="block touch-none"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onClick={handleClick}
+            />
 
             {/* HUD Overlay */}
-            <div className="absolute bottom-6 left-6 p-4 bg-slate-900/80 backdrop-blur border border-slate-700 rounded-xl text-slate-200 pointer-events-none">
-                <div className="font-bold text-xs uppercase text-slate-500 mb-1">Tile Inspector</div>
-                {selectedHex ? (
-                    <div>
-                        <div className="text-xl font-mono text-blue-400">
-                            {selectedHex.q}, {selectedHex.r}
+            <div className="absolute bottom-6 left-6 pointer-events-none">
+                <div className="bg-slate-900/80 backdrop-blur p-4 rounded-xl border border-slate-700 shadow-2xl text-slate-100 min-w-[200px]">
+                    <div className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-1">Tile Inspector</div>
+                    {selectedHex ? (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-3 h-3 rounded-full bg-current`} style={{ color: mapState.tiles.get(getHexId(selectedHex.q, selectedHex.r)) ? BIOME_COLORS[mapState.tiles.get(getHexId(selectedHex.q, selectedHex.r))!.biome] : 'white' }}></div>
+                                <span className="font-medium text-lg capitalize">{mapState.tiles.get(getHexId(selectedHex.q, selectedHex.r))?.biome.toLowerCase()}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm text-slate-400 font-mono">
+                                <div>Q: {selectedHex.q}</div>
+                                <div>R: {selectedHex.r}</div>
+                            </div>
                         </div>
-                        <div className="text-sm mt-1">
-                            {tiles.get(getHexId(selectedHex.q, selectedHex.r))?.biome || 'VOID'}
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-slate-500 italic">Select a tile</div>
-                )}
+                    ) : (
+                        <div className="text-slate-500 italic">Select a tile</div>
+                    )}
+                </div>
             </div>
 
-            <div className="absolute bottom-6 right-6 flex gap-2">
-                <button
-                    onClick={(e) => { e.stopPropagation(); setCamera({ x: 0, y: 0 }); }}
-                    className="bg-slate-800 text-white px-3 py-1 rounded shadow border border-slate-700 hover:bg-slate-700 pointer-events-auto"
-                >
-                    Recenter
-                </button>
-            </div>
+            <button
+                onClick={() => setCamera({ x: 0, y: 0 })}
+                className="absolute bottom-6 right-6 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg shadow-lg border border-slate-600 transition-colors z-10"
+            >
+                Recenter
+            </button>
         </div>
     );
 };
