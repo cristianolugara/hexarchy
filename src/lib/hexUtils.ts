@@ -78,6 +78,54 @@ const drawHexPath = (ctx: CanvasRenderingContext2D, x: number, y: number, offset
     ctx.closePath();
 }
 
+// Image Assets Cache
+const assets: Record<string, HTMLImageElement> = {};
+
+// Preload Assets with Transparency Processing
+const loadAsset = (key: string, src: string) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => {
+        // Create an offscreen canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Draw image
+        ctx.drawImage(img, 0, 0);
+
+        // Get pixel data
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        // Simple Chroma Key: Remove White (R>240, G>240, B>240)
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            // Threshold for white
+            if (r > 240 && g > 240 && b > 240) {
+                data[i + 3] = 0; // Set Alpha to 0
+            }
+        }
+
+        // Put modified data back
+        ctx.putImageData(imageData, 0, 0);
+
+        // Create a new image from the processed canvas
+        const processedImg = new Image();
+        processedImg.src = canvas.toDataURL();
+        assets[key] = processedImg;
+    };
+    img.src = src;
+};
+
+// Start Loading (Is it safe to do here? Yes, module level execution)
+loadAsset('PLAINS', '/assets/tile_plains.png');
+loadAsset('TREE', '/assets/prop_tree.png');
+
 export function drawHex(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -86,52 +134,48 @@ export function drawHex(
     stroke: string = "rgba(0,0,0,0.1)",
     strokeWidth: number = 1
 ) {
-    // 1. Draw "Base" (Sides/Shadow) - Extruded down
-    // We simulate the earth block below
-    const depth = HEX_DEPTH;
-    const sideColor = shadeColor(color, -30); // Darker version of top
+    // Determine Biome from color to pick asset
+    let assetKey = '';
+    // This is a bit hacky, comparing color string. Ideally pass BiomeType.
+    if (color === BIOME_COLORS.PLAINS) assetKey = 'PLAINS';
 
-    // Draw the "bottom" footprint first to cover gaps? No, standard is top-down painter's algo.
-    // Actually, for sides, we only see specific faces (Front-Left, Front, Front-Right).
-    // Drawing a full hex shifted down works okay for silhouette.
+    const tileImg = assets[assetKey];
 
-    drawHexPath(ctx, x, y, depth);
-    ctx.fillStyle = sideColor;
-    ctx.fill();
-
-    // To make it look "solid", we should connect corners.
-    // For low-poly canvas, just drawing the "Thick Layer" rectangle/quads for front faces is better.
-    // But for speed, let's just draw 'n' layers or a block. 
-    // Optimization: Draw a thick stroke or just a lower polygon.
-    // Let's stick to the "Shifted Shadow" simple approach for now, but thicker.
-    // To fix "floating" look, we draw a rectangle from middle-left to middle-right?
-    // Let's keep it simple: Base Hex.
-
-    // 2. Draw "Cap" (Top Face)
-    drawHexPath(ctx, x, y, 0);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = strokeWidth;
-    ctx.stroke();
+    if (tileImg && tileImg.complete) {
+        // Draw Image Tile
+        // Center the image. The image allows for overlap (hexagon is ~52px wide)
+        // Adjust scale/offset based on actual image dimensions vs HEX_SIZE
+        const size = HEX_SIZE * 2.5; // Trial factor
+        ctx.drawImage(tileImg, x - size / 2, y - size / 2 - 10, size, size);
+    } else {
+        // Fallback to Color Drawing
+        const depth = HEX_DEPTH;
+        const sideColor = shadeColor(color, -30);
+        drawHexPath(ctx, x, y, depth);
+        ctx.fillStyle = sideColor;
+        ctx.fill();
+        drawHexPath(ctx, x, y, 0);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+    }
 
     // 3. Draw Props (Trees, Mountains)
-    // Determine props based on color (Biome proxy)
-    // Ideally pass biome, but function signature is generic.
-    // Let's infer from color for now or add 'biome' param?
-    // We'll trust the caller passes plain color. 
-    // Wait, I can detect biome colors.
-
-    // Forest (Green) -> Trees
     if (color === BIOME_COLORS.FOREST) {
-        drawTree(ctx, x - 10, y - 5);
-        drawTree(ctx, x + 5, y + 2);
+        const treeImg = assets['TREE'];
+        if (treeImg && treeImg.complete) {
+            const h = 40;
+            const w = 25;
+            ctx.drawImage(treeImg, x - w / 2, y - h + 10, w, h);
+        } else {
+            drawTree(ctx, x, y); // fallback procedural
+        }
     }
-    // Mountain (Grey) -> Peak
     else if (color === BIOME_COLORS.MOUNTAIN) {
         drawMountain(ctx, x, y);
     }
-    // Hills (Light Green) -> Small mound
     else if (color === BIOME_COLORS.HILLS) {
         drawHill(ctx, x, y);
     }
