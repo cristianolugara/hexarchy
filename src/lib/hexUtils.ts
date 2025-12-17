@@ -82,7 +82,12 @@ const drawHexPath = (ctx: CanvasRenderingContext2D, x: number, y: number, offset
 const assets: Record<string, HTMLImageElement> = {};
 
 // Preload Assets with Transparency Processing
-const loadAsset = (key: string, src: string) => {
+interface AssetOptions {
+    smartShadows?: boolean;
+    threshold?: number;
+}
+
+const loadAsset = (key: string, src: string, options: AssetOptions = {}) => {
     const img = new Image();
     img.crossOrigin = "Anonymous";
     img.onload = () => {
@@ -100,7 +105,8 @@ const loadAsset = (key: string, src: string) => {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
 
-
+        // Default Threshold
+        const threshold = options.threshold ?? 60;
 
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i];
@@ -114,30 +120,27 @@ const loadAsset = (key: string, src: string) => {
                 Math.pow(255 - b, 2)
             );
 
-            // Thresholds
-            const removeThreshold = 40; // Pixels very close to white -> Remove completely
-            const shadowThreshold = 120; // Pixels somewhat close to white (shadows) -> Semi-transparent
+            if (options.smartShadows) {
+                // Special logic for Trees to keep ground shadows but remove box
+                const removeThreshold = 40;
+                const shadowThreshold = 120;
 
-            if (dist < removeThreshold) {
-                data[i + 3] = 0; // Transparent
-            } else if (dist < shadowThreshold) {
-                // It's likely a shadow (greyish on white background).
-                // Convert to black with alpha based on darkness.
-                // The closer to white (dist -> 0), the more transparent.
-                // The further from white (dist -> shadowThreshold), the more opaque.
-
-                // We want: White (dist=0) -> Alpha=0
-                //          Dark Grey (dist=shadowThreshold) -> Alpha=0.4 (approx)
-
-                const intensity = dist / shadowThreshold; // 0 to 1
-
-                // make it black/dark green shadow
-                data[i] = 10;     // R
-                data[i + 1] = 20; // G
-                data[i + 2] = 10; // B
-
-                // Alpha: weaker for lighter pixels
-                data[i + 3] = Math.floor(intensity * 100);
+                if (dist < removeThreshold) {
+                    data[i + 3] = 0; // Transparent
+                } else if (dist < shadowThreshold) {
+                    // Convert light grey background artifacts to shadow
+                    const intensity = dist / shadowThreshold;
+                    data[i] = 10;     // R
+                    data[i + 1] = 20; // G
+                    data[i + 2] = 10; // B
+                    data[i + 3] = Math.floor(intensity * 100);
+                }
+            } else {
+                // Standard Chroma Key for Tiles (Water, Mountain, etc)
+                // Just remove white, don't darken anything.
+                if (dist < threshold) {
+                    data[i + 3] = 0; // Transparent
+                }
             }
         }
 
@@ -154,9 +157,9 @@ const loadAsset = (key: string, src: string) => {
 
 // Start Loading (Is it safe to do here? Yes, module level execution)
 loadAsset('PLAINS', '/assets/tile_plains.png');
-loadAsset('TREE', '/assets/prop_tree.png');
-loadAsset('WATER', '/assets/tile_water.png');
-loadAsset('MOUNTAIN', '/assets/tile_mountain.png');
+loadAsset('TREE', '/assets/prop_tree.png', { smartShadows: true });
+loadAsset('WATER', '/assets/tile_water.png', { threshold: 40 });
+loadAsset('MOUNTAIN', '/assets/tile_mountain.png', { threshold: 40 });
 loadAsset('DIRT', '/assets/tile_dirt.png');
 
 export function drawHex(
