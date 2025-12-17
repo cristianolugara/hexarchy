@@ -8,8 +8,8 @@ export interface MapState {
     tiles: Record<string, Tile>; // Key: "q,r"
 }
 
-const INITIAL_WIDTH = 15;
-const INITIAL_HEIGHT = 10;
+const INITIAL_WIDTH = 25;
+const INITIAL_HEIGHT = 20;
 
 // Helper to init map
 const initTiles = (): Record<string, Tile> => {
