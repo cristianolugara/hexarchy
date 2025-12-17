@@ -118,7 +118,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
     const handleWheel = (e: React.WheelEvent) => {
         e.preventDefault(); // Stop page scroll (may require passive: false in pure JS, but React synthetic handles it mostly)
         const scaleAmount = -e.deltaY * 0.001;
-        setZoom(prev => Math.min(Math.max(0.5, prev + scaleAmount), 3));
+        setZoom(prev => Math.min(Math.max(0.5, prev + scaleAmount), 4));
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
