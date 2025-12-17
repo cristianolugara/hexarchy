@@ -22,6 +22,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
     // We can rely on mapState.tiles directly now.
 
     const [camera, setCamera] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
     const [isDragging, setIsDragging] = useState(false);
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [hoveredHex, setHoveredHex] = useState<HexCoordinate | null>(null);
@@ -47,9 +48,16 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
         ctx.fillStyle = '#1e293b'; // Slate 800
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Apply Camera Transform
         ctx.save();
-        ctx.translate(canvas.width / 2 + camera.x, canvas.height / 2 + camera.y);
+
+        // Center of Screen
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+
+        // Apply Zoom
+        ctx.scale(zoom, zoom);
+
+        // Apply Camera Pan
+        ctx.translate(camera.x, camera.y);
 
         // Draw Tiles - Render in order of Y (Painter's Algorithm for Isometric depth)
         const sortedTiles = Object.values(mapState.tiles).sort((a, b) => {
@@ -90,9 +98,29 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
 
         ctx.restore();
 
-    }, [mapState, camera, hoveredHex, selectedHex]);
+    }, [mapState, camera, zoom, hoveredHex, selectedHex]);
+
+    // Helpers for coordinate conversion with zoom
+    const getMapCoordinates = (clientX: number, clientY: number) => {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return { x: 0, y: 0 };
+
+        const screenX = clientX - rect.left - rect.width / 2;
+        const screenY = clientY - rect.top - rect.height / 2;
+
+        const x = screenX / zoom - camera.x;
+        const y = screenY / zoom - camera.y;
+
+        return { x, y };
+    }
 
     // Input Handlers
+    const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault(); // Stop page scroll (may require passive: false in pure JS, but React synthetic handles it mostly)
+        const scaleAmount = -e.deltaY * 0.001;
+        setZoom(prev => Math.min(Math.max(0.5, prev + scaleAmount), 3));
+    };
+
     const handleMouseDown = (e: React.MouseEvent) => {
         setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
@@ -100,21 +128,21 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
 
     const handleMouseMove = (e: React.MouseEvent) => {
         if (isDragging) {
-            const dx = e.clientX - dragStart.x;
-            const dy = e.clientY - dragStart.y;
+            const dx = (e.clientX - dragStart.x) / zoom; // Adjust drag speed by zoom? Better to drag screen pixels directly? 
+            // If we simply add dx to camera, and camera is inside scale...
+            // Standard approach: drag moves camera.
+            // If zoomed in (zoom=2), moving mouse 100px should move camera 50px? 
+            // ctx.translate implies camera is in World Units.
+            // Mouse move is Screen Units.
+            // So WorldDelta = ScreenDelta / Zoom.
+            const dy = (e.clientY - dragStart.y) / zoom;
+
             setCamera(prev => ({ x: prev.x + dx, y: prev.y + dy }));
             setDragStart({ x: e.clientX, y: e.clientY });
-        } else {
-            // Hover Logic
-            const rect = canvasRef.current?.getBoundingClientRect();
-            if (!rect) return;
-
-            const x = e.clientX - rect.left - rect.width / 2 - camera.x;
-            const y = e.clientY - rect.top - rect.height / 2 - camera.y;
-
-            const hex = pixelToHex(x, y);
-            setHoveredHex(hex);
         }
+
+        const { x, y } = getMapCoordinates(e.clientX, e.clientY);
+        setHoveredHex(pixelToHex(x, y));
     };
 
     const handleMouseUp = () => {
@@ -124,11 +152,8 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
     const handleClick = (e: React.MouseEvent) => {
         // Simple click detection (if not dragging) works because react events are synthesized.
         // We might want to lock click if drag distance was large, but for now standard click is fine.
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return;
-
-        const x = e.clientX - rect.left - rect.width / 2 - camera.x;
-        const y = e.clientY - rect.top - rect.height / 2 - camera.y;
+        // Prevent click if it was a drag (optional optimization, but keeps it simple)
+        const { x, y } = getMapCoordinates(e.clientX, e.clientY);
 
         const hex = pixelToHex(x, y);
         const id = getHexId(hex.q, hex.r);
@@ -151,6 +176,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
                 onClick={handleClick}
             />
 
