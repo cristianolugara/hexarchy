@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS } from '../../lib/hexUtils';
+import { drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS, drawBuilding } from '../../lib/hexUtils';
 import type { Tile, HexCoordinate } from '../../types/game';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/store';
@@ -73,19 +73,9 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
                 drawHex(ctx, x, y, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2);
             }
 
-            // Draw Building (Simple Placeholder)
+            // Draw Building
             if (tile.building) {
-                // Draw a simple block or emoji for now until assets
-                ctx.fillStyle = 'purple';
-                ctx.beginPath();
-                ctx.rect(x - 10, y - 25, 20, 20); // Simple hut
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = 'white';
-                ctx.font = '10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(tile.building[0], x, y - 10);
+                drawBuilding(ctx, x, y, tile.building);
             }
         });
 

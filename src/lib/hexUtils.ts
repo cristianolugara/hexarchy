@@ -232,3 +232,88 @@ export function pixelToHex(x: number, y: number): HexCoordinate {
 
     return hexRound(q, r);
 }
+
+// Building Rendering Helpers
+export function drawBuilding(ctx: CanvasRenderingContext2D, x: number, y: number, type: string) {
+    if (type === 'TOWN_HALL') {
+        // Main Keep
+        ctx.fillStyle = '#94a3b8'; // Stone Slate
+        ctx.fillRect(x - 10, y - 25, 20, 15);
+        // Roof
+        ctx.fillStyle = '#b91c1c'; // Red Roof
+        ctx.beginPath();
+        ctx.moveTo(x - 12, y - 25);
+        ctx.lineTo(x, y - 35);
+        ctx.lineTo(x + 12, y - 25);
+        ctx.fill();
+        // Door
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(x - 3, y - 15, 6, 8);
+    } else if (type === 'HOUSE') {
+        // Cottage
+        ctx.fillStyle = '#fcd34d'; // Yellowish/Wood
+        ctx.fillRect(x - 8, y - 12, 16, 10);
+        // Roof
+        ctx.fillStyle = '#7c2d12'; // Brown
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y - 12);
+        ctx.lineTo(x, y - 20);
+        ctx.lineTo(x + 10, y - 12);
+        ctx.fill();
+        // Door
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(x - 2, y - 8, 4, 6);
+    } else if (type === 'FARM') {
+        // Fields (Yellow patches)
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.ellipse(x - 8, y + 2, 6, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(x + 8, y + 2, 6, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Barn
+        ctx.fillStyle = '#ef4444'; // Red Barn
+        ctx.fillRect(x - 6, y - 12, 12, 10);
+        ctx.fillStyle = '#b91c1c'; // Dark Red Roof
+        ctx.beginPath();
+        ctx.moveTo(x - 8, y - 12);
+        ctx.lineTo(x, y - 18);
+        ctx.lineTo(x + 8, y - 12);
+        ctx.fill();
+    } else if (type === 'SAWMILL') {
+        // Logs
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(x - 10, y + 2, 8, 3);
+        ctx.fillRect(x - 8, y - 1, 8, 3);
+
+        // Structure
+        ctx.fillStyle = '#a8a29e'; // Stone/Wood mix
+        ctx.fillRect(x + 2, y - 15, 10, 15);
+        // Saw blade
+        ctx.fillStyle = '#cbd5e1';
+        ctx.beginPath();
+        ctx.arc(x + 2, y - 8, 4, 0, Math.PI * 2);
+        ctx.fill();
+    } else if (type === 'MINE') {
+        // Mountain backdrop (re-use color)
+        ctx.fillStyle = '#475569';
+        ctx.beginPath();
+        ctx.moveTo(x - 10, y + 5);
+        ctx.lineTo(x, y - 15);
+        ctx.lineTo(x + 10, y + 5);
+        ctx.fill();
+
+        // Cave Entrance
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.arc(x, y + 2, 5, Math.PI, 0); // Semi circle
+        ctx.fill();
+
+        // Wooden beams
+        ctx.strokeStyle = '#713f12';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x - 4, y - 2, 8, 6);
+    }
+}
