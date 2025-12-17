@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { GameLayout } from '../components/layout/GameLayout';
 import { GameMap } from '../components/game/GameMap';
 
