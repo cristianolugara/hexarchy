@@ -167,8 +167,9 @@ export function drawHex(
             size = HEX_SIZE * 3.0; // Big mountains
             yOffset = 25;
         } else if (assetKey === 'WATER') {
-            size = HEX_SIZE * 2.1; // Water fits tighter
-            yOffset = 5;
+            // Water should match the standard tile size if the asset is uniform with grass
+            size = HEX_SIZE * 2.5;
+            yOffset = 10;
         }
 
         ctx.drawImage(tileImg, x - size / 2, y - size / 2 - yOffset, size, size);
