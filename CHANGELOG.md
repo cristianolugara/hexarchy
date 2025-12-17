@@ -11,6 +11,7 @@
     - Added "Affordability" check based on Resource store.
 - **Visual Assets**:
     - Replaced procedural grass with `tile_plains.png` (High Quality Sprite).
+    - Integrated manual assets for `tile_water.png`, `tile_mountain.png`, `tile_dirt.png` (User Provided).
     - Replaced procedural trees with `prop_tree.png` (3D Rendered Pine Tree).
     - Added automatic "Transparency Chroma Key" to remove white backgrounds from loaded assets.
 - **Map Generation**:
