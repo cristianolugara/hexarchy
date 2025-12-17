@@ -185,6 +185,10 @@ export function drawHex(
         ctx.strokeStyle = stroke;
         ctx.lineWidth = strokeWidth;
         ctx.stroke();
+
+        if (color === BIOME_COLORS.WATER) {
+            drawWaterWaves(ctx, x, y);
+        }
     }
 
     // 3. Draw Props (Trees, Mountains)
@@ -232,30 +236,56 @@ function drawTree(ctx: CanvasRenderingContext2D, x: number, y: number) {
     ctx.fill();
 }
 
-function drawMountain(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    const h = 25;
-    const w = 15;
+function drawWaterWaves(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y - 5);
+    ctx.lineTo(x + 5, y - 5);
+    ctx.moveTo(x - 10, y + 2);
+    ctx.lineTo(x + 2, y + 2);
+    ctx.moveTo(x - 2, y + 8);
+    ctx.lineTo(x + 8, y + 8);
+    ctx.stroke();
+}
 
+function drawMountain(ctx: CanvasRenderingContext2D, x: number, y: number) {
+    // Main Peak
     ctx.fillStyle = '#64748b'; // Slate 500
     ctx.beginPath();
-    ctx.moveTo(x - w, y + 5);
-    ctx.lineTo(x, y - h);
-    ctx.lineTo(x + w, y + 5);
+    ctx.moveTo(x - 15, y + 5);
+    ctx.lineTo(x, y - 25);
+    ctx.lineTo(x + 15, y + 5);
     ctx.fill();
 
-    // Cap snow
+    // Side Peak (Left)
+    ctx.fillStyle = '#475569'; // Slate 600
+    ctx.beginPath();
+    ctx.moveTo(x - 20, y + 8);
+    ctx.lineTo(x - 10, y - 10);
+    ctx.lineTo(x, y + 8);
+    ctx.fill();
+
+    // Snow Caps
     ctx.fillStyle = 'white';
     ctx.beginPath();
-    ctx.moveTo(x - w / 3, y - h + 8);
-    ctx.lineTo(x, y - h);
-    ctx.lineTo(x + w / 3, y - h + 8);
+    ctx.moveTo(x - 5, y - 15);
+    ctx.lineTo(x, y - 25);
+    ctx.lineTo(x + 5, y - 15);
     ctx.fill();
 }
 
 function drawHill(ctx: CanvasRenderingContext2D, x: number, y: number) {
-    ctx.fillStyle = '#65a30d'; // Lime 600 (Darker than hill base)
+    // Draw 2-3 small mounds
+    ctx.fillStyle = '#a16207'; // Yellow/Brown 700 (Dirt)
+
     ctx.beginPath();
-    ctx.arc(x, y, 10, 0, Math.PI, true); // Semi circle
+    ctx.arc(x - 5, y + 2, 8, 0, Math.PI, true);
+    ctx.fill();
+
+    ctx.fillStyle = '#854d0e'; // Darker
+    ctx.beginPath();
+    ctx.arc(x + 6, y + 5, 6, 0, Math.PI, true);
     ctx.fill();
 }
 
