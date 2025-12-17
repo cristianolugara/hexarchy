@@ -100,14 +100,23 @@ const loadAsset = (key: string, src: string) => {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = imageData.data;
 
-        // Simple Chroma Key: Remove White (R>240, G>240, B>240)
+        // Improved Chroma Key: Euclidean Distance from White
+        const threshold = 90; // Tolerance for compression artifacts
+
         for (let i = 0; i < data.length; i += 4) {
             const r = data[i];
             const g = data[i + 1];
             const b = data[i + 2];
-            // Threshold for white
-            if (r > 240 && g > 240 && b > 240) {
-                data[i + 3] = 0; // Set Alpha to 0
+
+            // Distance from white (255, 255, 255)
+            const dist = Math.sqrt(
+                Math.pow(255 - r, 2) +
+                Math.pow(255 - g, 2) +
+                Math.pow(255 - b, 2)
+            );
+
+            if (dist < threshold) {
+                data[i + 3] = 0; // Transparent
             }
         }
 
@@ -125,6 +134,9 @@ const loadAsset = (key: string, src: string) => {
 // Start Loading (Is it safe to do here? Yes, module level execution)
 loadAsset('PLAINS', '/assets/tile_plains.png');
 loadAsset('TREE', '/assets/prop_tree.png');
+loadAsset('WATER', '/assets/tile_water.png');
+loadAsset('MOUNTAIN', '/assets/tile_mountain.png');
+loadAsset('DIRT', '/assets/tile_dirt.png');
 
 export function drawHex(
     ctx: CanvasRenderingContext2D,
@@ -136,22 +148,33 @@ export function drawHex(
 ) {
     // Determine Biome from color to pick asset
     let assetKey = '';
-    // Use Grass/Plains base for Plains, Forest, and Hills (so they look natural)
-    if (color === BIOME_COLORS.PLAINS || color === BIOME_COLORS.FOREST || color === BIOME_COLORS.HILLS) {
-        assetKey = 'PLAINS';
-    }
+
+    // Mapping
+    if (color === BIOME_COLORS.PLAINS) assetKey = 'PLAINS';
+    else if (color === BIOME_COLORS.FOREST) assetKey = 'PLAINS'; // Forest sits on grass
+    else if (color === BIOME_COLORS.HILLS) assetKey = 'DIRT';    // Hills are Dirt for now
+    else if (color === BIOME_COLORS.WATER) assetKey = 'WATER';
+    else if (color === BIOME_COLORS.MOUNTAIN) assetKey = 'MOUNTAIN';
 
     const tileImg = assets[assetKey];
 
     if (tileImg && tileImg.complete) {
-        // Draw Image Tile
-        // Center the image. The image allows for overlap (hexagon is ~52px wide)
-        // Adjust scale/offset based on actual image dimensions vs HEX_SIZE
-        const size = HEX_SIZE * 2.5; // Trial factor
-        ctx.drawImage(tileImg, x - size / 2, y - size / 2 - 10, size, size);
+        let size = HEX_SIZE * 2.5;
+        let yOffset = 10;
+
+        // Adjustments per type
+        if (assetKey === 'MOUNTAIN') {
+            size = HEX_SIZE * 3.0; // Big mountains
+            yOffset = 25;
+        } else if (assetKey === 'WATER') {
+            size = HEX_SIZE * 2.1; // Water fits tighter
+            yOffset = 5;
+        }
+
+        ctx.drawImage(tileImg, x - size / 2, y - size / 2 - yOffset, size, size);
     } else {
         // Fallback to Color Drawing
-        const depth = HEX_DEPTH;
+        const depth = (color === BIOME_COLORS.WATER) ? 0 : HEX_DEPTH;
         const sideColor = shadeColor(color, -30);
         drawHexPath(ctx, x, y, depth);
         ctx.fillStyle = sideColor;
@@ -168,18 +191,21 @@ export function drawHex(
     if (color === BIOME_COLORS.FOREST) {
         const treeImg = assets['TREE'];
         if (treeImg && treeImg.complete) {
-            const h = 40;
-            const w = 25;
-            ctx.drawImage(treeImg, x - w / 2, y - h + 10, w, h);
+            // Bigger and Centered Trees
+            const h = 70; // Taller
+            const w = 45; // Wider
+            // Draw centered on tile
+            ctx.drawImage(treeImg, x - w / 2, y - h + 15, w, h);
         } else {
             drawTree(ctx, x, y); // fallback procedural
         }
     }
+    // Remove old mountain/hill procedural calls if we use tiles
     else if (color === BIOME_COLORS.MOUNTAIN) {
-        drawMountain(ctx, x, y);
+        if (!assets['MOUNTAIN']?.complete) drawMountain(ctx, x, y);
     }
     else if (color === BIOME_COLORS.HILLS) {
-        drawHill(ctx, x, y);
+        if (!assets['DIRT']?.complete) drawHill(ctx, x, y);
     }
 }
 
