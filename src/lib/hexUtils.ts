@@ -136,8 +136,10 @@ export function drawHex(
 ) {
     // Determine Biome from color to pick asset
     let assetKey = '';
-    // This is a bit hacky, comparing color string. Ideally pass BiomeType.
-    if (color === BIOME_COLORS.PLAINS) assetKey = 'PLAINS';
+    // Use Grass/Plains base for Plains, Forest, and Hills (so they look natural)
+    if (color === BIOME_COLORS.PLAINS || color === BIOME_COLORS.FOREST || color === BIOME_COLORS.HILLS) {
+        assetKey = 'PLAINS';
+    }
 
     const tileImg = assets[assetKey];
 

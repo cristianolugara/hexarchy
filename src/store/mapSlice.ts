@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { type Tile, type BuildingType } from '../types/game';
-import { generateMap } from '../lib/hexUtils';
+import { type Tile, BiomeType, type BuildingType } from '../types/game';
+import { getHexId } from '../lib/hexUtils';
+import { Noise } from '../lib/noise';
 
 export interface MapState {
     width: number;
@@ -8,15 +9,55 @@ export interface MapState {
     tiles: Record<string, Tile>; // Key: "q,r"
 }
 
-const INITIAL_WIDTH = 25;
-const INITIAL_HEIGHT = 20;
+const INITIAL_WIDTH = 50;
+const INITIAL_HEIGHT = 40;
 
-// Helper to init map
+// Helper to init map with Noise
 const initTiles = (): Record<string, Tile> => {
-    const tileArray = generateMap(INITIAL_WIDTH, INITIAL_HEIGHT);
-    const tileMap: Record<string, Tile> = {};
-    tileArray.forEach(t => tileMap[t.id] = t);
-    return tileMap;
+    const tiles: Record<string, Tile> = {};
+    const elevationNoise = new Noise(Math.random());
+    const moistureNoise = new Noise(Math.random() + 100);
+    const scale = 0.1; // scale of noise features
+
+    for (let r = 0; r < INITIAL_HEIGHT; r++) {
+        const r_offset = Math.floor(r / 2);
+        for (let q = -r_offset; q < INITIAL_WIDTH - r_offset; q++) {
+            const id = getHexId(q, r);
+
+            // Generate Biome using Noise
+            const nx = q * scale;
+            const ny = r * scale;
+
+            const e = elevationNoise.noise2D(nx, ny);
+            const m = moistureNoise.noise2D(nx, ny);
+
+            let biome = BiomeType.PLAINS;
+
+            // Simple Biome Map
+            if (e < -0.3) {
+                biome = BiomeType.WATER;
+            } else if (e > 0.4) {
+                biome = BiomeType.MOUNTAIN;
+            } else if (e > 0.2) {
+                biome = BiomeType.HILLS;
+            } else {
+                // Plains or Forest based on moisture
+                if (m > 0.1) {
+                    biome = BiomeType.FOREST;
+                } else {
+                    biome = BiomeType.PLAINS;
+                }
+            }
+
+            tiles[id] = {
+                id,
+                coordinates: { q, r, s: -q - r },
+                biome,
+                resources: {}
+            };
+        }
+    }
+    return tiles;
 };
 
 const initialState: MapState = {
