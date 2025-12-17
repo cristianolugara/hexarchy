@@ -13,7 +13,6 @@ export class Noise {
 
         // Shuffle
         for (let i = 255; i > 0; i--) {
-            const r = Math.floor((seed * (i + 1)) % (i + 1));
             // Psuedo shuffle - actually just need random permutation
             // Better shuffle with seed:
             // Simple LCG
