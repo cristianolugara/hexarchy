@@ -27,7 +27,7 @@
 - **State**: Fixed Redux integration for Map Tiles (removed local state duplication).
 - **Visuals**: Fixed "Floating Trees" by ensuring trees are drawn *after* the ground tile overlay.
 - **Visuals**: Enhanced procedural rendering for Water (Waves), Mountains (Snow Peaks), and Hills (Dirt Mounds).
-- **Visuals**: Centered Tree props on tiles for better isometric alignment.
+- **Visuals**: Centered Tree props on tiles for better isometric alignment (Fixed vertical offset precision).
 - **Controls**: Increased Maximum Zoom Level from 3x to 4x.
 
 ### Technical
