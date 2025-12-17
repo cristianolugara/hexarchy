@@ -200,12 +200,9 @@ export function drawHex(
             const w = 45; // Wider
             // Draw centered on tile
             // x is center of hex. y is center of hex TOP face.
-            // We want the base of the tree (middle bottom) to be at (x, y + 10) roughly (center of hex volume)
-            // But actually, for isometric, 'y' passed here is the center of the TOP face (cap).
-            // To sit on top, base should be around y.
             // Center horizontally: x - w/2
-            // Vertical: y - h (top left of image) + adjustment
-            ctx.drawImage(treeImg, x - w / 2, y - h + 20, w, h);
+            // Vertical: y - h (top left of image) + adjustment (roots at y+5)
+            ctx.drawImage(treeImg, x - w / 2, y - h + 5, w, h);
         } else {
             drawTree(ctx, x, y); // fallback procedural
         }
