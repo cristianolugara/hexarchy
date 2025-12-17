@@ -1,6 +1,10 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../store/store';
 
 export const GameLayout = ({ children }: { children: React.ReactNode }) => {
+    const resources = useSelector((state: RootState) => state.resources);
+
     return (
         <div className="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans">
             {/* Top Bar */}
@@ -11,22 +15,22 @@ export const GameLayout = ({ children }: { children: React.ReactNode }) => {
                 </div>
 
                 <div className="flex gap-6">
-                    {/* Resources Placeholder */}
+                    {/* Resources Display */}
                     <div className="flex items-center gap-6 px-4 py-2 bg-slate-800/50 rounded-full border border-slate-700/50 backdrop-blur-sm">
                         <div className="flex items-center gap-2 text-amber-100/90 font-medium text-sm">
-                            <span className="text-lg">🌾</span> 120
+                            <span className="text-lg">🌾</span> {Math.floor(resources.food)}
                         </div>
                         <div className="w-px h-4 bg-slate-700"></div>
                         <div className="flex items-center gap-2 text-amber-100/90 font-medium text-sm">
-                            <span className="text-lg">🪵</span> 450
+                            <span className="text-lg">🪵</span> {Math.floor(resources.wood)}
                         </div>
                         <div className="w-px h-4 bg-slate-700"></div>
                         <div className="flex items-center gap-2 text-amber-100/90 font-medium text-sm">
-                            <span className="text-lg">🪨</span> 210
+                            <span className="text-lg">🪨</span> {Math.floor(resources.stone)}
                         </div>
                         <div className="w-px h-4 bg-slate-700"></div>
                         <div className="flex items-center gap-2 text-amber-400 font-medium text-sm">
-                            <span className="text-lg">💰</span> 50
+                            <span className="text-lg">💰</span> {Math.floor(resources.gold)}
                         </div>
                     </div>
                 </div>
