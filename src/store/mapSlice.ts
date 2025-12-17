@@ -52,8 +52,7 @@ const initTiles = (): Record<string, Tile> => {
             tiles[id] = {
                 id,
                 coordinates: { q, r, s: -q - r },
-                biome,
-                resources: {}
+                biome
             };
         }
     }
