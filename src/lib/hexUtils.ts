@@ -184,16 +184,16 @@ export function drawHex(
 
     if (tileImg && tileImg.complete) {
         let size = HEX_SIZE * 2.5;
-        let yOffset = 10;
+        let yOffset = 0; // Default aligned to grid center
 
         // Adjustments per type
         if (assetKey === 'MOUNTAIN') {
             size = HEX_SIZE * 3.0; // Big mountains
-            yOffset = 25;
+            yOffset = 15; // Relative height maintained (was 25 vs 10, now 15 vs 0)
         } else if (assetKey === 'WATER') {
             // Water should match the standard tile size if the asset is uniform with grass
             size = HEX_SIZE * 2.5;
-            yOffset = 10;
+            yOffset = 0;
         }
 
         ctx.drawImage(tileImg, x - size / 2, y - size / 2 - yOffset, size, size);
