@@ -78,7 +78,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
 
             // Draw Selection Highlight
             if (selectedHex && selectedHex.q === tile.coordinates.q && selectedHex.r === tile.coordinates.r) {
-                drawHex(ctx, x, y, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2);
+                drawHex(ctx, x, y, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2, true);
             }
 
             // Draw Building
@@ -92,7 +92,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
             const { x, y } = hexToPixel(hoveredHex);
             const id = getHexId(hoveredHex.q, hoveredHex.r);
             if (mapState.tiles[id]) {
-                drawHex(ctx, x, y, 'rgba(255, 255, 255, 0.2)', 'white', 2);
+                drawHex(ctx, x, y, 'rgba(255, 255, 255, 0.2)', 'white', 2, true);
             }
         }
 

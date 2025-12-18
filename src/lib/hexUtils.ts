@@ -168,7 +168,8 @@ export function drawHex(
     y: number,
     color: string,
     stroke: string = "rgba(0,0,0,0.1)",
-    strokeWidth: number = 1
+    strokeWidth: number = 1,
+    flat: boolean = false
 ) {
     // Determine Biome from color to pick asset
     let assetKey = '';
@@ -199,7 +200,7 @@ export function drawHex(
         ctx.drawImage(tileImg, x - size / 2, y - size / 2 - yOffset, size, size);
     } else {
         // Fallback to Color Drawing
-        const depth = (color === BIOME_COLORS.WATER) ? 0 : HEX_DEPTH;
+        const depth = (flat || color === BIOME_COLORS.WATER) ? 0 : HEX_DEPTH;
         const sideColor = shadeColor(color, -30);
         drawHexPath(ctx, x, y, depth);
         ctx.fillStyle = sideColor;
