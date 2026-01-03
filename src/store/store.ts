@@ -1,4 +1,4 @@
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import resourcesReducer from './resourcesSlice';
 import mapReducer from './mapSlice';
 import unitsReducer from './unitsSlice';
@@ -31,13 +31,15 @@ const saveState = (state: RootState) => {
 
 const preloadedState = loadState();
 
+const rootReducer = combineReducers({
+    resources: resourcesReducer,
+    map: mapReducer,
+    units: unitsReducer,
+});
+
 export const store = configureStore({
-    reducer: {
-        resources: resourcesReducer,
-        map: mapReducer,
-        units: unitsReducer,
-    },
-    preloadedState: preloadedState as any // Cast key prevents type inference issues with partial state loading
+    reducer: rootReducer,
+    preloadedState: preloadedState as any // Cast key prevents type inference issues
 });
 
 // Subscribe to store updates to save state (simple debounce could be added here but keeping it simple for now)
