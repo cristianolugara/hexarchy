@@ -9,8 +9,8 @@ export interface MapState {
     tiles: Record<string, Tile>; // Key: "q,r"
 }
 
-const INITIAL_WIDTH = 50;
-const INITIAL_HEIGHT = 40;
+const INITIAL_WIDTH = 100;
+const INITIAL_HEIGHT = 80;
 
 // Helper to init map with Noise
 const initTiles = (): Record<string, Tile> => {
