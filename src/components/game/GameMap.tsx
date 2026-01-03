@@ -205,91 +205,99 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
         return { x: normalizedX, y: normalizedY };
     }
 
-    setIsDragging(true);
-    setDragStart({ x: e.clientX, y: e.clientY });
-};
+    // Input Handlers
+    const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
+        const scaleAmount = -e.deltaY * 0.001;
+        setZoom(prev => Math.min(Math.max(0.6, prev + scaleAmount), 4));
+    };
 
-const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-        const dx = (e.clientX - dragStart.x) / zoom; // Adjust drag speed by zoom? Better to drag screen pixels directly? 
-        // If we simply add dx to camera, and camera is inside scale...
-        // Standard approach: drag moves camera.
-        // If zoomed in (zoom=2), moving mouse 100px should move camera 50px? 
-        // ctx.translate implies camera is in World Units.
-        // Mouse move is Screen Units.
-        // So WorldDelta = ScreenDelta / Zoom.
-        const dy = (e.clientY - dragStart.y) / zoom;
-
-        setCamera(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+    const handleMouseDown = (e: React.MouseEvent) => {
+        setIsDragging(true);
         setDragStart({ x: e.clientX, y: e.clientY });
-    }
+    };
 
-    const { x, y } = getMapCoordinates(e.clientX, e.clientY);
-    setHoveredHex(pixelToHex(x, y));
-};
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (isDragging) {
+            const dx = (e.clientX - dragStart.x) / zoom; // Adjust drag speed by zoom? Better to drag screen pixels directly? 
+            // If we simply add dx to camera, and camera is inside scale...
+            // Standard approach: drag moves camera.
+            // If zoomed in (zoom=2), moving mouse 100px should move camera 50px? 
+            // ctx.translate implies camera is in World Units.
+            // Mouse move is Screen Units.
+            // So WorldDelta = ScreenDelta / Zoom.
+            const dy = (e.clientY - dragStart.y) / zoom;
 
-const handleMouseUp = () => {
-    setIsDragging(false);
-};
+            setCamera(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+            setDragStart({ x: e.clientX, y: e.clientY });
+        }
 
-const handleClick = (e: React.MouseEvent) => {
-    // Simple click detection (if not dragging) works because react events are synthesized.
-    // We might want to lock click if drag distance was large, but for now standard click is fine.
-    // Prevent click if it was a drag (optional optimization, but keeps it simple)
-    const { x, y } = getMapCoordinates(e.clientX, e.clientY);
+        const { x, y } = getMapCoordinates(e.clientX, e.clientY);
+        setHoveredHex(pixelToHex(x, y));
+    };
 
-    const hex = pixelToHex(x, y);
-    const id = getHexId(hex.q, hex.r);
+    const handleMouseUp = () => {
+        setIsDragging(false);
+    };
 
-    if (mapState.tiles[id]) {
-        const tile = mapState.tiles[id];
-        setSelectedHex(hex);
-        if (onTileClick) onTileClick(tile);
-    } else {
-        setSelectedHex(null);
-    }
-};
+    const handleClick = (e: React.MouseEvent) => {
+        // Simple click detection (if not dragging) works because react events are synthesized.
+        // We might want to lock click if drag distance was large, but for now standard click is fine.
+        // Prevent click if it was a drag (optional optimization, but keeps it simple)
+        const { x, y } = getMapCoordinates(e.clientX, e.clientY);
 
-return (
-    <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-slate-950 cursor-crosshair">
-        <canvas
-            ref={canvasRef}
-            className="block touch-none"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-            onClick={handleClick}
-        />
+        const hex = pixelToHex(x, y);
+        const id = getHexId(hex.q, hex.r);
 
-        {/* HUD Overlay */}
-        <div className="absolute bottom-6 left-6 pointer-events-none">
-            <div className="bg-slate-900/80 backdrop-blur p-4 rounded-xl border border-slate-700 shadow-2xl text-slate-100 min-w-[200px]">
-                <div className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-1">Tile Inspector</div>
-                {selectedHex ? (
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className={`w-3 h-3 rounded-full bg-current`} style={{ color: mapState.tiles[getHexId(selectedHex.q, selectedHex.r)] ? BIOME_COLORS[mapState.tiles[getHexId(selectedHex.q, selectedHex.r)].biome] : 'white' }}></div>
-                            <span className="font-medium text-lg capitalize">{mapState.tiles[getHexId(selectedHex.q, selectedHex.r)]?.biome.toLowerCase()}</span>
+        if (mapState.tiles[id]) {
+            const tile = mapState.tiles[id];
+            setSelectedHex(hex);
+            if (onTileClick) onTileClick(tile);
+        } else {
+            setSelectedHex(null);
+        }
+    };
+
+    return (
+        <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-slate-950 cursor-crosshair">
+            <canvas
+                ref={canvasRef}
+                className="block touch-none"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onWheel={handleWheel}
+                onClick={handleClick}
+            />
+
+            {/* HUD Overlay */}
+            <div className="absolute bottom-6 left-6 pointer-events-none">
+                <div className="bg-slate-900/80 backdrop-blur p-4 rounded-xl border border-slate-700 shadow-2xl text-slate-100 min-w-[200px]">
+                    <div className="text-xs uppercase tracking-wider text-slate-500 font-bold mb-1">Tile Inspector</div>
+                    {selectedHex ? (
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className={`w-3 h-3 rounded-full bg-current`} style={{ color: mapState.tiles[getHexId(selectedHex.q, selectedHex.r)] ? BIOME_COLORS[mapState.tiles[getHexId(selectedHex.q, selectedHex.r)].biome] : 'white' }}></div>
+                                <span className="font-medium text-lg capitalize">{mapState.tiles[getHexId(selectedHex.q, selectedHex.r)]?.biome.toLowerCase()}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-sm text-slate-400 font-mono">
+                                <div>Q: {selectedHex.q}</div>
+                                <div>R: {selectedHex.r}</div>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm text-slate-400 font-mono">
-                            <div>Q: {selectedHex.q}</div>
-                            <div>R: {selectedHex.r}</div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-slate-500 italic">Select a tile</div>
-                )}
+                    ) : (
+                        <div className="text-slate-500 italic">Select a tile</div>
+                    )}
+                </div>
             </div>
-        </div>
 
-        <button
-            onClick={() => setCamera({ x: 0, y: 0 })}
-            className="absolute bottom-6 right-6 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg shadow-lg border border-slate-600 transition-colors z-10"
-        >
-            Recenter
-        </button>
-    </div>
-);
+            <button
+                onClick={() => setCamera({ x: 0, y: 0 })}
+                className="absolute bottom-6 right-6 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg shadow-lg border border-slate-600 transition-colors z-10"
+            >
+                Recenter
+            </button>
+        </div>
+    );
 };
