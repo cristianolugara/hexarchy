@@ -56,6 +56,35 @@ const initTiles = (): Record<string, Tile> => {
             };
         }
     }
+    // Initial Town Hall Placement
+    // Find a good spot near center
+    const centerX = Math.floor(INITIAL_WIDTH / 2);
+    const centerY = Math.floor(INITIAL_HEIGHT / 2);
+    let startTileId: string | null = null;
+    let minDistance = Infinity;
+
+    // Search for closest PLAINS to center
+    Object.values(tiles).forEach(tile => {
+        if (tile.biome === BiomeType.PLAINS) {
+            const dist = Math.sqrt(
+                Math.pow(tile.coordinates.q - (centerX - centerY / 2), 2) +
+                Math.pow(tile.coordinates.r - centerY, 2)
+            );
+
+            // Adjust center calc slightly because of offset coords vs axial
+            // Rough approximation is fine.
+
+            if (dist < minDistance) {
+                minDistance = dist;
+                startTileId = tile.id;
+            }
+        }
+    });
+
+    if (startTileId && tiles[startTileId]) {
+        tiles[startTileId].building = 'TOWN_HALL' as any; // Cast as BuildingType relies on import
+    }
+
     return tiles;
 };
 

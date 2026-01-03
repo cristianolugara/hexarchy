@@ -12,12 +12,12 @@ export interface ResourcesState {
 }
 
 const initialState: ResourcesState = {
-    food: 200,
-    wood: 200,
-    stone: 100,
+    food: 100,
+    wood: 100,
+    stone: 50,
     iron: 0,
-    gold: 50,
-    population: 5,
+    gold: 0,
+    population: 2, // Start small, let it grow
     happiness: 100,
 };
 
