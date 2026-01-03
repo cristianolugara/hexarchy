@@ -37,7 +37,7 @@ export const store = configureStore({
         map: mapReducer,
         units: unitsReducer,
     },
-    preloadedState
+    preloadedState: preloadedState as any // Cast key prevents type inference issues with partial state loading
 });
 
 // Subscribe to store updates to save state (simple debounce could be added here but keeping it simple for now)
