@@ -57,8 +57,18 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
 
         // Map Wrapping Constants
         // Map Width Pixel Calculation:
-        // HEX_WIDTH (width of 1 tile) = 30 * sqrt(3) ~ 51.9615
-        const WRAP_WIDTH = mapState.width * 51.9615;
+        const WRAP_WIDTH = mapState.width * 51.9615; // HEX_WIDTH
+        // Map Height Pixel Calculation:
+        // HEX_HEIGHT is 60. Vertical distance is 45 (0.75 * 60).
+        // Total Height = height * 45 * scaleY? 
+        // HEX_VERT_DIST is 0.75 * HEX_HEIGHT.
+        // Isometric Y squash is 0.65.
+        // So Per Row, Y advances by HEX_VERT_DIST * HEX_SCALE_Y?
+        // Let's verify pixelToHex logic implicitly.
+        // hexToPixel: y = HEX_SIZE * (3/2 * r) * HEX_SCALE_Y
+        // 3/2 * 30 = 45. 45 * 0.65 ~ 29.25.
+        // So Total Height = mapState.height * 29.25
+        const WRAP_HEIGHT = mapState.height * 29.25;
 
         // Drawing Loop
         const sortedTiles = Object.values(mapState.tiles).sort((a, b) => {
@@ -72,79 +82,96 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
             const color = BIOME_COLORS[tile.biome];
 
             // WRAPPING LOGIC
-            const camCenter = -camera.x;
+            const camCenterX = -camera.x;
+            const camCenterY = -camera.y;
 
             // Distance from camera center
-            let dist = x - camCenter;
+            let distX = x - camCenterX;
+            let distY = y - camCenterY;
 
-            // Wrap dist to be within [-W/2, W/2]
+            // Wrap distX to be within [-W/2, W/2]
             const halfW = WRAP_WIDTH / 2;
+            const halfH = WRAP_HEIGHT / 2;
 
-            // Manual Modulo
-            while (dist > halfW) { dist -= WRAP_WIDTH; }
-            while (dist < -halfW) { dist += WRAP_WIDTH; }
+            // Manual Modulo X
+            while (distX > halfW) { distX -= WRAP_WIDTH; }
+            while (distX < -halfW) { distX += WRAP_WIDTH; }
 
-            // Reconstruct absolute position relative to current camera frame
-            // We want to force the draw to occur at 'dist' relative to camera center
-            // The context is ALREADY translated by camera.x (which is -camCenter).
-            // So if we draw at (camCenter + dist), it transforms to:
-            // (camCenter + dist) + camera.x = (-camX + dist) + camX = dist.
-            // Wait, logic check:
-            // ScreenX = (WorldX + CamX) * Zoom + Center
-            // We want ScreenX to represent 'dist'.
-            // So we pass 'camCenter + dist' as the coordinate.
-            // Because (camCenter + dist) + (-camCenter) = dist.
-            // Correct.
+            // Manual Modulo Y
+            while (distY > halfH) { distY -= WRAP_HEIGHT; }
+            while (distY < -halfH) { distY += WRAP_HEIGHT; }
 
-            const drawX = camCenter + dist;
+            // Optimization: Cull if off screen
+            if (
+                Math.abs(distX) > (canvas.width / zoom / 2) + 100 ||
+                Math.abs(distY) > (canvas.height / zoom / 2) + 100
+            ) return;
 
-            // Optimization: Cull if off screen (distance approx > 1000/zoom)
-            if (Math.abs(dist) > (canvas.width / zoom / 2) + 100) return;
+            const drawX = camCenterX + distX;
+            const drawY = camCenterY + distY;
 
-            drawHex(ctx, drawX, y, color);
+            drawHex(ctx, drawX, drawY, color);
 
             // Draw Selection Highlight
             if (selectedHex && selectedHex.q === tile.coordinates.q && selectedHex.r === tile.coordinates.r) {
-                drawHex(ctx, drawX, y, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2, true);
+                drawHex(ctx, drawX, drawY, 'rgba(59, 130, 246, 0.4)', '#60a5fa', 2, true);
             }
 
             // Draw Building
             if (tile.building) {
-                drawBuilding(ctx, drawX, y, tile.building);
+                drawBuilding(ctx, drawX, drawY, tile.building);
             }
         });
 
         // Draw Units (Wrapped)
         unitsState.units.forEach(unit => {
-            const camCenter = -camera.x;
-            let dist = unit.x - camCenter;
+            const camCenterX = -camera.x;
+            const camCenterY = -camera.y;
+
+            let distX = unit.x - camCenterX;
+            let distY = unit.y - camCenterY;
+
             const halfW = WRAP_WIDTH / 2;
-            while (dist > halfW) { dist -= WRAP_WIDTH; }
-            while (dist < -halfW) { dist += WRAP_WIDTH; }
+            const halfH = WRAP_HEIGHT / 2;
 
-            if (Math.abs(dist) > (canvas.width / zoom / 2) + 50) return;
+            while (distX > halfW) { distX -= WRAP_WIDTH; }
+            while (distX < -halfW) { distX += WRAP_WIDTH; }
+            while (distY > halfH) { distY -= WRAP_HEIGHT; }
+            while (distY < -halfH) { distY += WRAP_HEIGHT; }
 
-            drawUnit(ctx, camCenter + dist, unit.y, unit.type);
+            if (
+                Math.abs(distX) > (canvas.width / zoom / 2) + 50 ||
+                Math.abs(distY) > (canvas.height / zoom / 2) + 50
+            ) return;
+
+            drawUnit(ctx, camCenterX + distX, camCenterY + distY, unit.type);
         });
 
         // Draw Hover Cursor (Wrapped Calculation needed?)
-        // Hover is derived from mouse, so we need to inverse wrap.
         if (hoveredHex) {
             const { x, y } = hexToPixel(hoveredHex);
-            // We need to draw this highlight where the mouse is roughly.
-            // But we can just use the same logic:
-            const camCenter = -camera.x;
-            let dist = x - camCenter;
-            const halfW = WRAP_WIDTH / 2;
-            while (dist > halfW) { dist -= WRAP_WIDTH; }
-            while (dist < -halfW) { dist += WRAP_WIDTH; }
+            const camCenterX = -camera.x;
+            const camCenterY = -camera.y;
 
-            if (Math.abs(dist) <= (canvas.width / zoom / 2) + 100) {
-                const id = getHexId(hoveredHex.q, hoveredHex.r);
-                // Check if valid tile exists at this coord
-                if (mapState.tiles[id]) {
-                    drawHex(ctx, camCenter + dist, y, 'rgba(255, 255, 255, 0.2)', 'white', 2, true);
-                }
+            let distX = x - camCenterX;
+            let distY = y - camCenterY;
+
+            const halfW = WRAP_WIDTH / 2;
+            const halfH = WRAP_HEIGHT / 2;
+
+            while (distX > halfW) { distX -= WRAP_WIDTH; }
+            while (distX < -halfW) { distX += WRAP_WIDTH; }
+            while (distY > halfH) { distY -= WRAP_HEIGHT; }
+            while (distY < -halfH) { distY += WRAP_HEIGHT; }
+
+            // Check visibility manually to be safe, though not strictly needed for cursor logic alone
+            // Draw at the wrapped position
+            const drawX = camCenterX + distX;
+            const drawY = camCenterY + distY;
+
+            const id = getHexId(hoveredHex.q, hoveredHex.r);
+            if (mapState.tiles[id]) {
+                drawHex(ctx, drawX, drawY, 'rgba(255, 255, 255, 0.2)', 'white', 2, true);
             }
         }
 
@@ -163,22 +190,19 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
         const x = screenX / zoom - camera.x;
         const y = screenY / zoom - camera.y;
 
-        // X is the absolute world coordinate (potentially infinite if user scrolled far).
-        // We need to normalize X to [0, MAP_WIDTH] to find the tile.
-        const WRAP_WIDTH = mapState.width * 51.9615;
+        // X and Y are absolute world coordinates.
+        // Normalize them to [0, MAP_WIDTH/HEIGHT] for logic.
 
-        // Normalize x
-        // We want x to be modulo WRAP_WIDTH, but keeping the relative offset consistent with the grid generation.
-        // Grid starts at 0 approx.
+        const WRAP_WIDTH = mapState.width * 51.9615;
+        const WRAP_HEIGHT = mapState.height * 29.25;
+
         let normalizedX = x % WRAP_WIDTH;
         if (normalizedX < 0) normalizedX += WRAP_WIDTH;
 
-        // However, pixelToHex uses axial logic.
-        // We might need to adjust for the start of the map if it's not at 0.
-        // Assuming map starts at x=0 (q=0 around center?).
-        // Let's use normalizedX.
+        let normalizedY = y % WRAP_HEIGHT;
+        if (normalizedY < 0) normalizedY += WRAP_HEIGHT;
 
-        return { x: normalizedX, y };
+        return { x: normalizedX, y: normalizedY };
     }
 
     // Input Handlers
