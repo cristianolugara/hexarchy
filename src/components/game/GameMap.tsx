@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS, drawBuilding } from '../../lib/hexUtils';
+import { drawHex, hexToPixel, pixelToHex, getHexId, BIOME_COLORS, drawBuilding, drawUnit } from '../../lib/hexUtils';
 import type { Tile, HexCoordinate } from '../../types/game';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../store/store';
@@ -16,8 +16,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
 
     // Redux State
     const mapState = useSelector((state: RootState) => state.map);
-    // Convert Record to Map for easier iteration in rendering if needed, 
-    // or just iterate Object.values
+    const unitsState = useSelector((state: RootState) => state.units);
 
     // We can rely on mapState.tiles directly now.
 
@@ -27,9 +26,6 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
     const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
     const [hoveredHex, setHoveredHex] = useState<HexCoordinate | null>(null);
     const [selectedHex, setSelectedHex] = useState<HexCoordinate | null>(null);
-
-    // Map generation is now handled by Redux Initial State or Thunks. 
-    // We don't generate here anymore.
 
     // Draw Loop
     useEffect(() => {
@@ -70,10 +66,6 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
             const { x, y } = hexToPixel(tile.coordinates);
             const color = BIOME_COLORS[tile.biome];
 
-            // Pass building info to drawHex if exists
-            // For now, drawHex doesn't accept building argument.
-            // We need to modify drawHex or draw building separately on top.
-
             drawHex(ctx, x, y, color);
 
             // Draw Selection Highlight
@@ -87,6 +79,16 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
             }
         });
 
+        // Draw Units
+        // Sort units by Y as well for depth, though usually they are small enough
+        // or we sort them along with tiles? Hard to sort with tiles since loop is tile-based.
+        // For simple top-down, drawing units AFTER tiles is usually fine unless unit is Behind a tall building.
+        // To fix depth properly, we'd need to put units and tiles in same list and sort.
+        // For now, draw units after tiles.
+        unitsState.units.forEach(unit => {
+            drawUnit(ctx, unit.x, unit.y, unit.type);
+        });
+
         // Draw Hover Cursor
         if (hoveredHex) {
             const { x, y } = hexToPixel(hoveredHex);
@@ -98,7 +100,7 @@ export const GameMap = ({ onTileClick }: GameMapProps) => {
 
         ctx.restore();
 
-    }, [mapState, camera, zoom, hoveredHex, selectedHex]);
+    }, [mapState, unitsState, camera, zoom, hoveredHex, selectedHex]);
 
     // Helpers for coordinate conversion with zoom
     const getMapCoordinates = (clientX: number, clientY: number) => {

@@ -1,11 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import resourcesReducer from './resourcesSlice';
 import mapReducer from './mapSlice';
+import unitsReducer from './unitsSlice';
 
 export const store = configureStore({
     reducer: {
         resources: resourcesReducer,
         map: mapReducer,
+        units: unitsReducer,
     },
 });
 
